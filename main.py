@@ -135,3 +135,24 @@ def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenc
 
             #retrocede (permuta)
             pecasUsadas[i] = False
+
+def forcaBruta(pecas):
+    global melhorCusto, melhorAlocacao, melhorSequencia
+    
+    melhorCusto = float('inf')
+    melhorAlocacao = []
+    melhorSequencia = []
+
+    pecasUsadas = [False] * len(pecas)
+    placasAtuais = [] 
+    custoAtual = 0.0
+    sequenciaAtual = [] 
+    
+    inicioTempo = time.time()
+
+    backtracking(pecas, pecasUsadas, placasAtuais, custoAtual, sequenciaAtual)
+
+    fimTempo = time.time()
+    tempoTotal = fimTempo - inicioTempo
+    
+    return melhorAlocacao, melhorCusto, tempoTotal
