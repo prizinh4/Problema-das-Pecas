@@ -74,3 +74,64 @@ def qualPrimeiraPosicaoValida(pecasAlocadas, altura, largura):
     # se os ifs não tiverem retorno, a peca nao coube
     return None, None, 0.0
 
+def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenciaAtual):
+    global melhorCusto, melhorAlocacao, melhorSequencia
+
+    if len(sequenciaAtual) == len(pecasParaAlocar):
+        if custoAtual < melhorCusto:
+            melhorCusto = custoAtual
+            melhorAlocacao = copy.deepcopy(placasAtuais)
+            melhorSequencia = copy.deepcopy(sequenciaAtual)
+        return
+
+    for i in range(len(pecasParaAlocar)):
+        if not pecasUsadas[i]:
+            
+            # escolher qual peça restante vai tentar encaixar
+            pecasUsadas[i] = True
+            pecaAtual = pecasParaAlocar[i]
+            altura, largura = pecaAtual
+            
+            novaSequencia = sequenciaAtual + [pecaAtual]
+            
+            posicaoEncontrada = False
+            idPlacaAlocada = -1
+            pecaAlocadaInfo = None
+            custoDoCorte = 0.0
+
+            # tenta encaixar
+            for idPlaca, pecasNaPlaca in enumerate(placasAtuais):
+                posX, posY, custoCorte = qualPrimeiraPosicaoValida(pecasNaPlaca, altura, largura)
+                
+                if posX is not None: 
+                    posicaoEncontrada = True
+                    idPlacaAlocada = idPlaca
+                    pecaAlocadaInfo = (altura, largura, posX, posY)
+                    custoDoCorte = custoCorte
+                    
+                    placasAtuais[idPlaca].append(pecaAlocadaInfo)
+                    
+                    backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual + custoDoCorte, novaSequencia)
+                    
+                    # retrocede
+                    placasAtuais[idPlaca].pop() 
+                    break 
+
+            # se nao coube, pega nova placa
+            if not posicaoEncontrada:
+                valido, custoCorte = posicaoEhValidaECusto([], altura, largura, MARGEM, MARGEM)
+                
+                if valido: 
+                    pecaAlocadaInfo = (altura, largura, MARGEM, MARGEM)
+                    custoDoCorte = custoCorte
+                    
+                    placasAtuais.append([pecaAlocadaInfo])
+                    
+                    custoComNovaPlaca = custoAtual + custoDoCorte + CUSTO_PLACA
+                    backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoComNovaPlaca, novaSequencia)
+                    
+                    # retrocede
+                    placasAtuais.pop() 
+
+            #retrocede (permuta)
+            pecasUsadas[i] = False
