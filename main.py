@@ -1,5 +1,6 @@
 import copy
 import time
+import sys
 
 CUSTO_PLACA = 1000.00
 CUSTO_POR_CM = 0.01
@@ -87,7 +88,7 @@ def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenc
     for i in range(len(pecasParaAlocar)):
         if not pecasUsadas[i]:
             
-            # escolher qual peça restante vai tentar encaixar
+            # escolhe qual peça restante vai tentar encaixar
             pecasUsadas[i] = True
             pecaAtual = pecasParaAlocar[i]
             altura, largura = pecaAtual
@@ -106,7 +107,8 @@ def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenc
                 if posX is not None: 
                     posicaoEncontrada = True
                     idPlacaAlocada = idPlaca
-                    pecaAlocadaInfo = (altura, largura, posX, posY)
+                    
+                    pecaAlocadaInfo = (posX, posY, altura, largura)
                     custoDoCorte = custoCorte
                     
                     placasAtuais[idPlaca].append(pecaAlocadaInfo)
@@ -122,7 +124,7 @@ def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenc
                 valido, custoCorte = posicaoEhValidaECusto([], altura, largura, MARGEM, MARGEM)
                 
                 if valido: 
-                    pecaAlocadaInfo = (altura, largura, MARGEM, MARGEM)
+                    pecaAlocadaInfo = (MARGEM, MARGEM, altura, largura)
                     custoDoCorte = custoCorte
                     
                     placasAtuais.append([pecaAlocadaInfo])
@@ -156,3 +158,5 @@ def forcaBruta(pecas):
     tempoTotal = fimTempo - inicioTempo
     
     return melhorAlocacao, melhorCusto, tempoTotal
+
+
