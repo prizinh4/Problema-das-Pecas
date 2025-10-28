@@ -1,8 +1,16 @@
+import copy
+import time
+
 CUSTO_PLACA = 1000.00
 CUSTO_POR_CM = 0.01
 MARGEM = 10 
 DIMENSAO_PLACA = 300
 DIMENSAO_FINAL = DIMENSAO_PLACA - 2 * MARGEM #280 cm
+
+# variáveis que vão guardar a melhor solução
+melhorCusto = float('inf') #inf = infinito pq precisa começar com o maior valor possível pra depois minimizar
+melhorAlocacao = []
+melhorSequencia = []
 
 def lerPecas(nomeArq):
     pecas = []
@@ -44,3 +52,25 @@ def posicaoEhValidaECusto(pecasAlocadas, altura, largura, posicaoX, posicaoY):
     perimetro = 2 * (altura + largura)
     custoCorte = perimetro * CUSTO_POR_CM
     return True, custoCorte
+
+def qualPrimeiraPosicaoValida(pecasAlocadas, altura, largura):
+    limiteMax = DIMENSAO_PLACA - MARGEM
+    
+    for y in range(MARGEM, limiteMax):
+        
+        # só continua se a peca couber na vertical nessa linha y
+        if y + altura <= limiteMax:
+            
+            for x in range(MARGEM, limiteMax):
+                
+                # so continua se a peca couber na horizontal nessa coluna x
+                if x + largura <= limiteMax:
+                
+                    valido, custoCorte = posicaoEhValidaECusto(pecasAlocadas, altura, largura, x, y)
+                    
+                    if valido:
+                        return x, y, custoCorte
+    
+    # se os ifs não tiverem retorno, a peca nao coube
+    return None, None, 0.0
+
