@@ -29,8 +29,9 @@ def lerPecas(nomeArq: str) -> List[Peca]:
             pecas.append(Peca(altura=altura, largura=comprimento))
     return pecas
 
+# retorna duas coisas pq foi pedido que ambas fossem feitas em uma função só
 def validarPosicaoECalcularCusto(pecasAlocadas: Placa, altura: int, largura: int, 
-                                 posicaoX: int, posicaoY: int) -> Tuple[bool, float]:
+                                 posicaoX: int, posicaoY: int) -> Tuple[bool, float]: 
     limiteMax = DIMENSAO_PLACA - MARGEM  
 
     if (posicaoX < MARGEM or 
@@ -61,7 +62,7 @@ def validarPosicaoECalcularCusto(pecasAlocadas: Placa, altura: int, largura: int
     custoCorte = perimetro * CUSTO_POR_CM
     return True, custoCorte
 
-def qualPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
+def acharPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
     limiteMax = DIMENSAO_PLACA - MARGEM
     
     for y in range(MARGEM, limiteMax):
@@ -74,7 +75,8 @@ def qualPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -
     
     return None, None, 0.0
 
-def backtracking(pecasParaAlocar: List[Peca], pecasUsadas: List[bool], 
+# usa backtracking
+def buscarMelhorSequencia(pecasParaAlocar: List[Peca], pecasUsadas: List[bool], 
                  placasAtuais: List[Placa], custoAtual: float, 
                  sequenciaAtual: List[Peca]) -> None:
 
@@ -102,7 +104,7 @@ def backtracking(pecasParaAlocar: List[Peca], pecasUsadas: List[bool],
             custoDoCorte = 0.0
 
             for idPlaca, pecasNaPlaca in enumerate(placasAtuais):
-                posX, posY, custoCorte = qualPrimeiraPosicaoValida(pecasNaPlaca, altura, largura)
+                posX, posY, custoCorte = acharPrimeiraPosicaoValida(pecasNaPlaca, altura, largura)
                 
                 if posX is not None: 
                     posicaoEncontrada = True
@@ -113,7 +115,7 @@ def backtracking(pecasParaAlocar: List[Peca], pecasUsadas: List[bool],
                     
                     placasAtuais[idPlaca].append(pecaAlocadaInfo)
                     
-                    backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual + custoDoCorte, novaSequencia)
+                    buscarMelhorSequencia(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual + custoDoCorte, novaSequencia)
                     
                     placasAtuais[idPlaca].pop() 
                     break 
@@ -128,13 +130,13 @@ def backtracking(pecasParaAlocar: List[Peca], pecasUsadas: List[bool],
                     placasAtuais.append([pecaAlocadaInfo])
                     
                     custoComNovaPlaca = custoAtual + custoDoCorte + CUSTO_PLACA
-                    backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoComNovaPlaca, novaSequencia)
+                    buscarMelhorSequencia(pecasParaAlocar, pecasUsadas, placasAtuais, custoComNovaPlaca, novaSequencia)
                     
                     placasAtuais.pop() 
 
             pecasUsadas[i] = False
 
-def forcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
+def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
 
     global melhorCusto, melhorAlocacao, melhorSequencia
     
@@ -147,11 +149,13 @@ def forcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     custoAtual: float = 0.0
     sequenciaAtual: List[Peca] = [] 
     
-    inicioTempo = time.time()
+    inicio = time.time()    
+    buscarMelhorSequencia(pecas, pecasUsadas, placasAtuais, custoAtual, sequenciaAtual)
+    fim = time.time()
+    
+    print(f"Melhor custo: R${melhorCusto:.2f}")
+    print(f"Tempo: {fim - inicio:.2f} s")
 
-    backtracking(pecas, pecasUsadas, placasAtuais, custoAtual, sequenciaAtual)
-
-    fimTempo = time.time()
-    tempoTotal = fimTempo - inicioTempo
+    tempoTotal = fim - inicio
     
     return melhorAlocacao, melhorCusto, tempoTotal
