@@ -1,3 +1,6 @@
+# João de Jesus e Avila
+# Priscila Andrade de Moraes
+
 import copy
 import time
 import sys
