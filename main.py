@@ -22,7 +22,7 @@ def lerPecas(nomeArq):
             pecas.append((altura, comprimento))
     return pecas
 
-def posicaoEhValidaECusto(pecasAlocadas, altura, largura, posicaoX, posicaoY):
+def validarPosicaoECalcularCusto(pecasAlocadas, altura, largura, posicaoX, posicaoY):
     limiteMax = DIMENSAO_PLACA - MARGEM  
 
     if (posicaoX < MARGEM or 
@@ -67,7 +67,7 @@ def qualPrimeiraPosicaoValida(pecasAlocadas, altura, largura):
                 # so continua se a peca couber na horizontal nessa coluna x
                 if x + largura <= limiteMax:
                 
-                    valido, custoCorte = posicaoEhValidaECusto(pecasAlocadas, altura, largura, x, y)
+                    valido, custoCorte = validarPosicaoECalcularCusto(pecasAlocadas, altura, largura, x, y)
                     
                     if valido:
                         return x, y, custoCorte
@@ -121,7 +121,7 @@ def backtracking(pecasParaAlocar, pecasUsadas, placasAtuais, custoAtual, sequenc
 
             # se nao coube, pega nova placa
             if not posicaoEncontrada:
-                valido, custoCorte = posicaoEhValidaECusto([], altura, largura, MARGEM, MARGEM)
+                valido, custoCorte = validarPosicaoECalcularCusto([], altura, largura, MARGEM, MARGEM)
                 
                 if valido: 
                     pecaAlocadaInfo = (MARGEM, MARGEM, altura, largura)
