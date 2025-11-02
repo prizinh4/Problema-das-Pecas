@@ -62,7 +62,11 @@ def validarPosicaoECalcularCusto(pecasAlocadas: Placa, altura: int, largura: int
             return False, 0.0
 
     perimetro = 2 * (altura + largura)
-    custoCorte = perimetro * CUSTO_POR_CM
+    perimetroCoincidente = calcularPerimetroCoincidente(pecasAlocadas, posicaoX, posicaoY, altura, largura)
+    corteUnico = max(0, perimetro - perimetroCoincidente)
+    custoCorte = corteUnico * CUSTO_POR_CM
+    #custoCorte = perimetro * CUSTO_POR_CM
+
     return True, custoCorte
 
 def acharPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
@@ -77,6 +81,38 @@ def acharPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) 
                         return x, y, custoCorte
     
     return None, None, 0.0
+
+
+def calcularPerimetroCoincidente(pecasAlocadas: Placa, posicaoX: int, posicaoY: int, altura: int, largura: int) -> int:
+    totalCoincidente = 0
+
+    novaX1 = posicaoX
+    novaX2 = posicaoX + largura
+    novaY1 = posicaoY
+    novaY2 = posicaoY + altura
+
+    for alocada in pecasAlocadas:
+        ax1 = alocada.x
+        ax2 = alocada.x + alocada.largura
+        ay1 = alocada.y
+        ay2 = alocada.y + alocada.altura
+        if novaX1 == ax2:
+            overlap = min(novaY2, ay2) - max(novaY1, ay1)
+            if overlap > 0:
+                totalCoincidente += overlap
+        if novaX2 == ax1:
+            overlap = min(novaY2, ay2) - max(novaY1, ay1)
+            if overlap > 0:
+                totalCoincidente += overlap
+        if novaY1 == ay2:
+            overlap = min(novaX2, ax2) - max(novaX1, ax1)
+            if overlap > 0:
+                totalCoincidente += overlap
+        if novaY2 == ay1:
+            overlap = min(novaX2, ax2) - max(novaX1, ax1)
+            if overlap > 0:
+                totalCoincidente += overlap
+    return totalCoincidente
 
 # usa backtracking
 def buscarMelhorSequencia(pecasParaAlocar: List[Peca], pecasUsadas: List[bool], 
@@ -162,3 +198,21 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     tempoTotal = fim - inicio
     
     return melhorAlocacao, melhorCusto, tempoTotal
+
+def main():
+    if len(sys.argv) < 2:
+        print("Uso: python main.py <arquivo_pecas.txt>")
+        sys.exit(1)
+
+    caminho = sys.argv[1]
+    pecas = lerPecas(caminho)
+    placas, melhor_custo, tempo_total = resolverForcaBruta(pecas)
+
+    print(f"Instancia: {caminho}")
+    print("Algoritmo: forca_bruta_atual (primeira posicao valida)")
+    print(f"Placas usadas: {len(placas)}")
+    print(f"Custo total: R$ {melhor_custo:.2f}")
+    print(f"Tempo: {tempo_total:.6f} s")
+
+if __name__ == "__main__":
+    main()
