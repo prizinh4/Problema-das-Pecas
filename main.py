@@ -65,12 +65,16 @@ def validarPosicaoECalcularCusto(pecasAlocadas: Placa, altura: int, largura: int
     perimetroCoincidente = calcularPerimetroCoincidente(pecasAlocadas, posicaoX, posicaoY, altura, largura)
     corteUnico = max(0, perimetro - perimetroCoincidente)
     custoCorte = corteUnico * CUSTO_POR_CM
-    #custoCorte = perimetro * CUSTO_POR_CM
 
     return True, custoCorte
 
-def acharPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
+def acharMelhorPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
     limiteMax = DIMENSAO_PLACA - MARGEM
+
+    melhorX = None
+    melhorY = None
+    melhorCusto = float('inf')
+    melhorCoincidencia = -1
     
     for y in range(MARGEM, limiteMax):
         if y + altura <= limiteMax:
@@ -78,10 +82,17 @@ def acharPrimeiraPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) 
                 if x + largura <= limiteMax:
                     valido, custoCorte = validarPosicaoECalcularCusto(pecasAlocadas, altura, largura, x, y)
                     if valido:
-                        return x, y, custoCorte
+                        perimetroCoincidente = calcularPerimetroCoincidente(pecasAlocadas, x, y, altura, largura)
+                        if custoCorte < melhorCusto or (custoCorte == melhorCusto and perimetroCoincidente > melhorCoincidencia):
+                            melhorCusto = custoCorte
+                            melhorCoincidencia = perimetroCoincidente
+                            melhorX = x
+                            melhorY = y
     
-    return None, None, 0.0
+    if melhorX is not None:
+        return melhorX, melhorY, melhorCusto
 
+    return None, None, 0.0
 
 def calcularPerimetroCoincidente(pecasAlocadas: Placa, posicaoX: int, posicaoY: int, altura: int, largura: int) -> int:
     totalCoincidente = 0
@@ -143,7 +154,7 @@ def buscarMelhorSequencia(pecasParaAlocar: List[Peca], pecasUsadas: List[bool],
             custoDoCorte = 0.0
 
             for idPlaca, pecasNaPlaca in enumerate(placasAtuais):
-                posX, posY, custoCorte = acharPrimeiraPosicaoValida(pecasNaPlaca, altura, largura)
+                posX, posY, custoCorte = acharMelhorPosicaoValida(pecasNaPlaca, altura, largura)
                 
                 if posX is not None: 
                     posicaoEncontrada = True
@@ -192,14 +203,14 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     buscarMelhorSequencia(pecas, pecasUsadas, placasAtuais, custoAtual, sequenciaAtual)
     fim = time.time()
     
-    print(f"Melhor custo: R${melhorCusto:.2f}")
-    print(f"Tempo: {fim - inicio:.2f} s")
+    #print(f"Melhor custo: R${melhorCusto:.2f}")
+    #print(f"Tempo: {fim - inicio:.2f} s")
 
     tempoTotal = fim - inicio
     
     return melhorAlocacao, melhorCusto, tempoTotal
 
-def main():
+#def main():
     if len(sys.argv) < 2:
         print("Uso: python main.py <arquivo_pecas.txt>")
         sys.exit(1)
@@ -214,5 +225,5 @@ def main():
     print(f"Custo total: R$ {melhor_custo:.2f}")
     print(f"Tempo: {tempo_total:.6f} s")
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     main()
