@@ -103,6 +103,35 @@ def acharMelhorPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) ->
     # se não encontrou nenhuma válida
     return None, None, 0.0
 
+def construir_solucao_gulosa_inicial(pecas: List[Peca]) -> Tuple[List[Placa], float, List[Peca]]:
+    placas_gulosas: List[Placa] = []
+    custo_total = 0.0
+    sequencia = []
+
+    for p in pecas:
+        altura, largura = p.altura, p.largura
+        alocou = False
+
+        for placa in placas_gulosas:
+            x, y, custo_corte = acharMelhorPosicaoValida(placa, altura, largura)
+
+            if x is not None:
+                placa.append(PecaAlocada(x=x, y=y, altura=altura, largura=largura))
+                custo_total += custo_corte
+                sequencia.append(p)
+                alocou = True
+                break
+
+        if not alocou:
+            valido, custo_corte = validarPosicaoECalcularCusto([], altura, largura, MARGEM, MARGEM)
+
+            if valido:
+                placas_gulosas.append([PecaAlocada(x=MARGEM, y=MARGEM, altura=altura, largura=largura)])
+                custo_total += custo_corte + CUSTO_PLACA
+                sequencia.append(p)
+
+    return placas_gulosas, custo_total, sequencia
+    
 
 # calcula o total de bordas que encostam em outras peças (reduz custo de corte)
 def calcularArestasEncostadas(pecasAlocadas: Placa, posicaoX: int, posicaoY: int, altura: int, largura: int) -> int:
@@ -221,6 +250,12 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
 def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     global melhorCusto, melhorAlocacao, melhorSequencia
 
+    placas_inc, custo_inc, seq_inc = construir_solucao_gulosa_inicial(pecas)
+    if custo_inc > 0.0:
+        melhorCusto = custo_inc
+        melhorAlocacao = copy.deepcopy(placas_inc)
+        melhorSequencia = copy.deepcopy(seq_inc)
+
     def limite_inferior(custo_atual: float, placas: List[Placa], usadas: List[bool]) -> float:
         area_util_por_placa = DIMENSAO_FINAL * DIMENSAO_FINAL
         area_livre_total = 0
@@ -294,9 +329,6 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
 
                 usadas[i] = False
 
-    melhorCusto = float('inf')
-    melhorAlocacao = []
-    melhorSequencia = []
     usadas: List[bool] = [False] * len(pecas)
     placas: List[Placa] = []
     inicio = time.time()
