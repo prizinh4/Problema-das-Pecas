@@ -4,6 +4,7 @@
 import copy
 import time
 import sys
+import math
 from collections import namedtuple 
 from typing import List, Tuple, Optional
 
@@ -101,6 +102,7 @@ def acharMelhorPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) ->
 
     # se não encontrou nenhuma válida
     return None, None, 0.0
+
 
 # calcula o total de bordas que encostam em outras peças (reduz custo de corte)
 def calcularArestasEncostadas(pecasAlocadas: Placa, posicaoX: int, posicaoY: int, altura: int, largura: int) -> int:
@@ -216,3 +218,117 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     
     return melhorAlocacao, melhorCusto, tempoTotal
 
+def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
+    global melhorCusto, melhorAlocacao, melhorSequencia
+
+    def limite_inferior(custo_atual: float, placas: List[Placa], usadas: List[bool]) -> float:
+        area_util_por_placa = DIMENSAO_FINAL * DIMENSAO_FINAL
+        area_livre_total = 0
+
+        for placa in placas:
+
+            area_ocupada = 0
+
+            for p in placa:
+                area_ocupada += p.altura * p.largura
+
+            livre = area_util_por_placa - area_ocupada
+
+            if livre > 0:
+                area_livre_total += livre
+
+        area_restante = 0
+
+        for i, usada in enumerate(usadas):
+            if not usada:
+                area_restante += pecas[i].altura * pecas[i].largura
+
+        deficit = area_restante - area_livre_total
+        novas_placas_min = 0 if deficit <= 0 else math.ceil(deficit / area_util_por_placa)
+
+        return custo_atual + novas_placas_min * CUSTO_PLACA
+
+    def explorar_bb(pecas_para_alocar: List[Peca], usadas: List[bool], placas: List[Placa], custo_atual: float, seq_atual: List[Peca]) -> None:
+        global melhorCusto, melhorAlocacao, melhorSequencia
+
+        if custo_atual >= melhorCusto:
+            return
+
+        if len(seq_atual) == len(pecas_para_alocar):
+            if custo_atual < melhorCusto:
+                melhorCusto = custo_atual
+                melhorAlocacao = copy.deepcopy(placas)
+                melhorSequencia = copy.deepcopy(seq_atual)
+            return
+        
+        if limite_inferior(custo_atual, placas, usadas) >= melhorCusto:
+            return
+        
+        for i in range(len(pecas_para_alocar)):
+
+            if not usadas[i]:
+                usadas[i] = True
+                p = pecas_para_alocar[i]
+                altura, largura = p.altura, p.largura
+                nova_seq = seq_atual + [p]
+                alocou_em_existente = False
+
+                for conteudo in placas:
+                    x, y, custo_corte = acharMelhorPosicaoValida(conteudo, altura, largura)
+
+                    if x is not None:
+                        alocou_em_existente = True
+                        aloc = PecaAlocada(x=x, y=y, altura=altura, largura=largura)
+                        conteudo.append(aloc)
+                        explorar_bb(pecas_para_alocar, usadas, placas, custo_atual + custo_corte, nova_seq)
+                        conteudo.pop()
+
+                if not alocou_em_existente:                    
+                    valido, custo_corte = validarPosicaoECalcularCusto([], altura, largura, MARGEM, MARGEM)
+
+                    if valido:
+                        nova_placa = [PecaAlocada(x=MARGEM, y=MARGEM, altura=altura, largura=largura)]
+                        placas.append(nova_placa)
+                        explorar_bb(pecas_para_alocar, usadas, placas, custo_atual + custo_corte + CUSTO_PLACA, nova_seq)
+                        placas.pop()
+
+                usadas[i] = False
+
+    melhorCusto = float('inf')
+    melhorAlocacao = []
+    melhorSequencia = []
+    usadas: List[bool] = [False] * len(pecas)
+    placas: List[Placa] = []
+    inicio = time.time()
+    explorar_bb(pecas, usadas, placas, 0.0, [])
+    fim = time.time()
+    return melhorAlocacao, melhorCusto, fim - inicio
+
+def main():
+    if len(sys.argv) < 3:
+        print("Uso: python main.py <arquivo_pecas.txt> <algoritmo>")
+        print("algoritmo: forca | bb | ambos")
+        sys.exit(1)
+
+    caminho = sys.argv[1]
+    modo = sys.argv[2].lower()
+    pecas = lerPecas(caminho)
+
+    if modo in ("forca", "ambos"):
+        placas, melhor_custo, tempo_total = resolverForcaBruta(pecas)
+        print(f"Instancia: {caminho}")
+        print("Algoritmo: forca_bruta")
+        print(f"Placas usadas: {len(placas)}")
+        print(f"Custo total: R$ {melhor_custo:.2f}")
+        print(f"Tempo: {tempo_total:.6f} s")
+
+    if modo in ("bb", "ambos"):
+        placas, melhor_custo, tempo_total = resolverBranchAndBound(pecas)
+        print(f"Instancia: {caminho}")
+        print("Algoritmo: branch_and_bound")
+        print(f"Placas usadas: {len(placas)}")
+        print(f"Custo total: R$ {melhor_custo:.2f}")
+        print(f"Tempo: {tempo_total:.6f} s")
+
+if __name__ == "__main__":
+    main()
