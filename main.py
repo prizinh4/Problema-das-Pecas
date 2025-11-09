@@ -103,7 +103,7 @@ def acharMelhorPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) ->
     # se não encontrou nenhuma válida
     return None, None, 0.0
 
-def construir_solucao_gulosa_inicial(pecas: List[Peca]) -> Tuple[List[Placa], float, List[Peca]]:
+def construirSolucaoGulosaInicial(pecas: List[Peca]) -> Tuple[List[Placa], float, List[Peca]]:
     placas_gulosas: List[Placa] = []
     custo_total = 0.0
     sequencia = []
@@ -250,16 +250,20 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
 def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     global melhorCusto, melhorAlocacao, melhorSequencia
 
-    placas_inc, custo_inc, seq_inc = construir_solucao_gulosa_inicial(pecas)
+    # constrói um limite superior inicial para podar mais cedo
+    placas_inc, custo_inc, seq_inc = construirSolucaoGulosaInicial(pecas)
     if custo_inc > 0.0:
         melhorCusto = custo_inc
         melhorAlocacao = copy.deepcopy(placas_inc)
         melhorSequencia = copy.deepcopy(seq_inc)
 
-    def limite_inferior(custo_atual: float, placas: List[Placa], usadas: List[bool]) -> float:
+    def acharLimiteInferior(custo_atual: float, placas: List[Placa], usadas: List[bool]) -> float:
+        # estima um custo mínimo adicional a partir da área restante
+        # conta a área livre nas placas abertas e compara com a área das peças não alocadas
         area_util_por_placa = DIMENSAO_FINAL * DIMENSAO_FINAL
         area_livre_total = 0
 
+        # soma área livre de cada placa já aberta
         for placa in placas:
 
             area_ocupada = 0
@@ -272,23 +276,27 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
             if livre > 0:
                 area_livre_total += livre
 
+        # soma área das peças que faltam alocar
         area_restante = 0
-
         for i, usada in enumerate(usadas):
             if not usada:
                 area_restante += pecas[i].altura * pecas[i].largura
 
+         # se a área restante não cabe no espaço livre, calcula quantas placas novas no mínimo
         deficit = area_restante - area_livre_total
         novas_placas_min = 0 if deficit <= 0 else math.ceil(deficit / area_util_por_placa)
 
+        # limite inferior é o custo atual mais o custo mínimo de novas placas
         return custo_atual + novas_placas_min * CUSTO_PLACA
 
-    def explorar_bb(pecas_para_alocar: List[Peca], usadas: List[bool], placas: List[Placa], custo_atual: float, seq_atual: List[Peca]) -> None:
+    def explorarBranchAndBound(pecas_para_alocar: List[Peca], usadas: List[bool], placas: List[Placa], custo_atual: float, seq_atual: List[Peca]) -> None:
         global melhorCusto, melhorAlocacao, melhorSequencia
 
+        # poda imediata se já ficou pior ou igual ao melhor conhecido
         if custo_atual >= melhorCusto:
             return
 
+        # caso base: alocou todas as peças, atualiza melhor solução se ficou melhor
         if len(seq_atual) == len(pecas_para_alocar):
             if custo_atual < melhorCusto:
                 melhorCusto = custo_atual
@@ -296,47 +304,50 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
                 melhorSequencia = copy.deepcopy(seq_atual)
             return
         
-        if limite_inferior(custo_atual, placas, usadas) >= melhorCusto:
+        if acharLimiteInferior(custo_atual, placas, usadas) >= melhorCusto:
             return
         
+        # escolhe a próxima peça livre para tentar alocar
         for i in range(len(pecas_para_alocar)):
-
             if not usadas[i]:
-                usadas[i] = True
+                usadas[i] = True # marca a peça como usada neste ramo
                 p = pecas_para_alocar[i]
                 altura, largura = p.altura, p.largura
                 nova_seq = seq_atual + [p]
                 alocou_em_existente = False
 
+                # tenta colocar a peça nas placas já abertas
                 for conteudo in placas:
                     x, y, custo_corte = acharMelhorPosicaoValida(conteudo, altura, largura)
 
                     if x is not None:
                         alocou_em_existente = True
+                        # empilha a escolha, explora o ramo e desfaz a escolha
                         aloc = PecaAlocada(x=x, y=y, altura=altura, largura=largura)
                         conteudo.append(aloc)
-                        explorar_bb(pecas_para_alocar, usadas, placas, custo_atual + custo_corte, nova_seq)
+                        explorarBranchAndBound(pecas_para_alocar, usadas, placas, custo_atual + custo_corte, nova_seq)
                         conteudo.pop()
 
+                # se não coube em nenhuma placa, abre uma nova placa e tenta
                 if not alocou_em_existente:                    
                     valido, custo_corte = validarPosicaoECalcularCusto([], altura, largura, MARGEM, MARGEM)
 
                     if valido:
                         nova_placa = [PecaAlocada(x=MARGEM, y=MARGEM, altura=altura, largura=largura)]
                         placas.append(nova_placa)
-                        explorar_bb(pecas_para_alocar, usadas, placas, custo_atual + custo_corte + CUSTO_PLACA, nova_seq)
+                        explorarBranchAndBound(pecas_para_alocar, usadas, placas, custo_atual + custo_corte + CUSTO_PLACA, nova_seq)
                         placas.pop()
 
-                usadas[i] = False
+                usadas[i] = False # libera a peça para outros ramos
 
     usadas: List[bool] = [False] * len(pecas)
     placas: List[Placa] = []
     inicio = time.time()
-    explorar_bb(pecas, usadas, placas, 0.0, [])
+    explorarBranchAndBound(pecas, usadas, placas, 0.0, [])
     fim = time.time()
     return melhorAlocacao, melhorCusto, fim - inicio
 
-def main():
+#def main():
     if len(sys.argv) < 3:
         print("Uso: python main.py <arquivo_pecas.txt> <algoritmo>")
         print("algoritmo: forca | bb | ambos")
@@ -362,5 +373,5 @@ def main():
         print(f"Custo total: R$ {melhor_custo:.2f}")
         print(f"Tempo: {tempo_total:.6f} s")
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     main()
