@@ -72,6 +72,13 @@ def validarPosicaoECalcularCusto(pecasAlocadas: Placa, altura: int, largura: int
     custo = calcularCustoCorte(pecasAlocadas, posicaoX, posicaoY, altura, largura) if valido else 0.0
     return valido, custo
 
+def ordenarDecrescente(pecas: List[Peca]) -> List[int]:
+    return sorted(range(len(pecas)), key=lambda i: pecas[i].altura * pecas[i].largura, reverse=True)
+
+def gerarCustoInicial(p: Peca) -> float:
+    perimetro = 2 * (p.altura + p.largura)
+    return perimetro * CUSTO_POR_CM
+
 def acharMelhorPosicaoValida(pecasAlocadas: Placa, altura: int, largura: int) -> Tuple[Optional[int], Optional[int], float]:
     limiteMax = DIMENSAO_PLACA - MARGEM
     melhorX = None
@@ -250,12 +257,9 @@ def resolverForcaBruta(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
 def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float]:
     global melhorCusto, melhorAlocacao, melhorSequencia
 
-    # constrói um limite superior inicial para podar mais cedo
-    placas_inc, custo_inc, seq_inc = construirSolucaoGulosaInicial(pecas)
-    if custo_inc > 0.0:
-        melhorCusto = custo_inc
-        melhorAlocacao = copy.deepcopy(placas_inc)
-        melhorSequencia = copy.deepcopy(seq_inc)
+    melhorCusto = sum(CUSTO_PLACA + gerarCustoInicial(p) for p in pecas)
+    melhorAlocacao = []
+    melhorSequencia = []
 
     def acharLimiteInferior(custo_atual: float, placas: List[Placa], usadas: List[bool]) -> float:
         # estima um custo mínimo adicional a partir da área restante
@@ -347,7 +351,7 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
     fim = time.time()
     return melhorAlocacao, melhorCusto, fim - inicio
 
-#def main():
+def main():
     if len(sys.argv) < 3:
         print("Uso: python main.py <arquivo_pecas.txt> <algoritmo>")
         print("algoritmo: forca | bb | ambos")
@@ -356,6 +360,8 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
     caminho = sys.argv[1]
     modo = sys.argv[2].lower()
     pecas = lerPecas(caminho)
+    ordem = ordenarDecrescente(pecas)
+    pecas_ordenadas = [pecas[i] for i in ordem]
 
     if modo in ("forca", "ambos"):
         placas, melhor_custo, tempo_total = resolverForcaBruta(pecas)
@@ -366,12 +372,12 @@ def resolverBranchAndBound(pecas: List[Peca]) -> Tuple[List[Placa], float, float
         print(f"Tempo: {tempo_total:.6f} s")
 
     if modo in ("bb", "ambos"):
-        placas, melhor_custo, tempo_total = resolverBranchAndBound(pecas)
+        placas, melhor_custo, tempo_total = resolverBranchAndBound(pecas_ordenadas)
         print(f"Instancia: {caminho}")
         print("Algoritmo: branch_and_bound")
         print(f"Placas usadas: {len(placas)}")
         print(f"Custo total: R$ {melhor_custo:.2f}")
         print(f"Tempo: {tempo_total:.6f} s")
 
-#if __name__ == "__main__":
+if __name__ == "__main__":
     main()
